@@ -1,0 +1,74 @@
+{{- $networkTypes := list "mainnet" "testnet" }}
+
+{{- range $networkType, $networks := $.Values }}
+  {{- if not (has $networkType $networkTypes)}}
+    {{- continue }}
+  {{- end }}
+  {{- range $networkName, $networkValues := $networks }}
+    {{ $networkValues := $networkValues.values }}
+    {{- $networkValues = mergeOverwrite (mustDeepCopy $.Values.networkTemplate) $networkValues}}
+    {{- $globalEnvVars := mustDeepCopy (ternary $.Values.testnetEnvVars $.Values.mainnetEnvVars (eq $networkType "testnet")) }}
+    {{- $globalImageTag := ternary $.Values.images.backend.testnet $.Values.images.backend.mainnet (eq $networkType "testnet") }}
+    {{- $networkEnvVars := mustDeepCopy (mergeOverwrite $globalEnvVars $networkValues.envVars $networkValues.daemon.envVars) }}
+
+    {{- $imageTag := $networkValues.daemon.image.tag | default $networkValues.image.tag | default $globalImageTag }}
+
+    {{- if not $networkValues.daemon.enabled }}
+      {{- continue }}
+    {{- end }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: subscan-essentials-daemon-{{- include "subscan-essentials.networkName" $networkName }}
+  annotations:
+    {{- include "subscan-essentials.backend.reload" $networkName | nindent 4 }}
+  labels:
+    {{- range $key, $value := $.Values.commonLabels }}
+    {{ $key }}: "{{ $value | replace "{networkName}" $networkName | replace "{isMainnet}" (printf "%v" (eq $networkType "mainnet")) }}"
+    {{- end }}
+    component: essentials-daemon
+spec:
+  replicas: {{ $networkValues.daemon.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "subscan-essentials.selectorLabels" $networkName | nindent 6 }}
+      component: essentials-daemon
+  template:
+    metadata:
+      labels:
+      {{- range $key, $value := $.Values.commonLabels }}
+        {{ $key }}: "{{ $value | replace "{networkName}" $networkName | replace "{isMainnet}" (printf "%v" (eq $networkType "mainnet")) }}"
+      {{- end }}
+        component: essentials-daemon
+    spec:
+      containers:
+        - name: subscan-essentials-daemon
+          image: "{{ $.Values.images.backend.repository }}:{{ $imageTag }}"
+          imagePullPolicy: IfNotPresent
+          args:
+            - start
+            - subscribe
+          ports:
+            - name: http
+              containerPort: 4399
+              protocol: TCP
+          envFrom:
+            - secretRef:
+                name: {{ include "subscan-essentials.fullname" $networkName }}-envvars
+            {{- if get $networkEnvVars "envFrom" }}
+              {{- get $networkEnvVars "envFrom" | toYaml | nindent 12 }}
+            {{- end }}
+          env:
+            {{- $daemonEnvVars := mergeOverwrite $networkValues.envVars $networkValues.daemon.envVars }}
+            {{- range $envName, $envValue := $daemonEnvVars }}
+            - name: {{ $envName }}
+              value: {{ $envValue | toString | quote }}
+            {{- end }}
+          resources:
+            requests:
+              {{- toYaml $networkValues.daemon.resources.requests | nindent 14 }}
+            limits:
+              cpu: {{ $networkValues.daemon.resources.limits.cpu }}
+  {{- end }}
+{{- end }}

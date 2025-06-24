@@ -1,0 +1,68 @@
+{{- $networkTypes := list "mainnet" "testnet" }}
+
+{{- range $networkType, $networks := $.Values }}
+  {{- if not (has $networkType $networkTypes)}}
+    {{- continue }}
+  {{- end }}
+  {{- range $networkName, $networkValues := $networks }}
+    {{ $networkValues := $networkValues.values }}
+    {{- $networkValues = mergeOverwrite (mustDeepCopy $.Values.networkTemplate) $networkValues}}
+    {{- if not $networkValues.ui.enabled }}
+      {{- continue }}
+    {{- end }}
+    {{- $imageTag := $networkValues.ui.image.tag | default $.Values.images.ui.tag }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: subscan-essentials-ui-{{- include "subscan-essentials.networkName" $networkName }}
+  annotations:
+    {{- include "subscan-essentials.ui.reload" $networkName | nindent 4 }}
+  labels:
+    {{- range $key, $value := $.Values.commonLabels }}
+    {{ $key }}: "{{ $value | replace "{networkName}" $networkName | replace "{isMainnet}" (printf "%v" (eq $networkType "mainnet")) }}"
+    {{- end }}
+    component: essentials-ui
+spec:
+  replicas: {{ $networkValues.ui.replicaCount }}
+  selector:
+    matchLabels:
+      {{- include "subscan-essentials.selectorLabels" $networkName | nindent 6 }}
+      component: essentials-ui
+  template:
+    metadata:
+      labels:
+      {{- range $key, $value := $.Values.commonLabels }}
+        {{ $key }}: "{{ $value | replace "{networkName}" $networkName | replace "{isMainnet}" (printf "%v" (eq $networkType "mainnet")) }}"
+      {{- end }}
+        component: essentials-ui
+    spec:
+      volumes:
+        - name: subscan-essentials-ui-backend-subdomain
+          configMap:
+            name: subscan-essentials-{{- include "subscan-essentials.networkName" $networkName }}-backend-subdomain
+      containers:
+        - name: subscan-essentials-ui
+          image: "{{ $.Values.images.ui.repository }}:{{ $imageTag }}"
+          imagePullPolicy: IfNotPresent
+          volumeMounts:
+            - name: subscan-essentials-ui-backend-subdomain
+              mountPath: /app/public/__ENV.js
+              subPath: __ENV.js
+          env:
+            - name: NODE_ENV
+              value: production
+            - name: HOSTNAME
+              value: "0.0.0.0"
+          ports:
+            - name: http
+              containerPort: 3000
+              protocol: TCP
+          resources:
+            requests:
+              {{- toYaml $networkValues.ui.resources.requests | nindent 14 }}
+            limits:
+              cpu: {{ $networkValues.ui.resources.limits.cpu }}
+              memory: {{ $networkValues.ui.resources.limits.memory }}
+  {{- end }}
+{{- end }}

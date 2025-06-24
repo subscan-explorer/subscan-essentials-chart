@@ -1,0 +1,166 @@
+commonLabels:
+  app.kubernetes.io/name: "subscan-essentials-backend"
+  app.kubernetes.io/instance: "subscan-essentials-{networkName}"
+  essentials.subscan.io/network: "{networkName}"
+  essentials.subscan.io/mainnet: "{isMainnet}"
+
+mainnetEnvVars: {}
+  # POSTGRES_HOST: subscan-postgres-testnet-a.production.svc
+  # POSTGRES_USER: subscan-writer
+  # POSTGRES_PORT: 5432
+  # POSTGRES_SSL_MODE: require
+  # DB_DRIVER: postgres
+
+  # REDIS_HOST: subscan-redis-essentials-master.db.svc
+  # REDIS_PORT: "6379"
+  # REDIS_PASSWORD: ""
+  # REDIS_DATABASE: "5"
+
+  # VERIFY_SERVER: http://subscan-solidity-verification-tool.production.svc:80
+  # envFrom:
+  #   - secretRef:
+  #       name: subscan-essentials-mainnet-envvars
+  #   - secretRef:
+  #       name: subscan-essentials-passwords
+
+testnetEnvVars: {}
+  # POSTGRES_HOST: subscan-postgres-testnet-a.production.svc
+  # POSTGRES_USER: subscan-writer
+  # POSTGRES_PORT: 5432
+  # POSTGRES_SSL_MODE: require
+  # DB_DRIVER: postgres
+
+  # REDIS_HOST: subscan-redis-essentials-master.db.svc
+  # REDIS_PORT: "6379"
+  # REDIS_PASSWORD: ""
+  # REDIS_DATABASE: "5"
+
+  # VERIFY_SERVER: http://subscan-solidity-verification-tool.production.svc:80
+  # envFrom:
+  #   - secretRef:
+  #       name: subscan-essentials-mainnet-envvars
+  #   - secretRef:
+  #       name: subscan-essentials-passwords
+        
+
+networkTemplate:
+  daemon:
+    enabled: true
+    metrics:
+      enabled: true
+    image:
+      tag: ""
+    envVars: {}
+    resources:
+      requests:
+        cpu: 100m
+        memory: 100Mi
+      limits:
+        cpu: 500m
+        memory: 300Mi
+  worker:
+    enabled: true
+    replicaCount: 1
+    envVars: {}
+    image:
+      tag: ""
+    metrics:
+      enabled: true
+    resources:
+      requests:
+        cpu: 200m
+        memory: 400Mi
+      limits:
+        cpu: 800m
+        memory: 600Mi
+  api:
+    enabled: true
+    replicaCount: 1
+    autoscaling:
+      enabled: false
+      minReplicas: 1
+      maxReplicas: 4
+      targetCPUUtilizationPercentage: 80
+      targetMemoryUtilizationPercentage: 80
+    envVars: {}
+    image:
+      tag: ""
+    metrics:
+      enabled: true
+    podDisruptionBudget:
+      enabled: false
+      maxUnavailable: null
+      minAvailable: 50%
+    podSecurityContext: {}
+    resources:
+      requests:
+        cpu: 200m
+        memory: 500Mi
+      limits:
+        cpu: 500m
+        memory: 1000Mi
+  ingress:
+    enabled: true
+    subdomains: []
+  image:
+    tag: ""
+  ui:
+    enabled: true
+    replicaCount: 1
+    image:
+      tag: ""
+    resources:
+      requests:
+        cpu: 100m
+        memory: 200Mi
+      limits:
+        cpu: 500m
+        memory: 300Mi
+  envVars: {}
+
+testnet: {}
+  # assethub-westend:
+  #   values:
+  #     envVars:
+  #       CHAIN_WS_ENDPOINT: wss://api-asset-hub-westend.dwellir.com/xxxxx
+  #       NETWORK_NODE: assethub-westend
+  #       POSTGRES_DB: subscan_assethub_westend
+  #       POSTGRES_HOST: subscan-postgres-testnet-a
+  #       ETH_RPC: https://westend-asset-hub-eth-rpc.polkadot.io
+  #       REDIS_HOST: subscan-redis-essentials-master.db.svc
+  #     worker:
+  #       replicaCount: 1
+  #     ingress:
+  #       subdomains:
+  #         - assethub-westend-lite
+mainnet: {}
+
+images:
+  backend:
+    repository: "quay.io/subscan-explorer/subscan-essentials"
+    mainnet: "sha-5775183-33"
+    testnet: "sha-5775183-33"
+  ui:
+    repository: "quay.io/subscan-explorer/subscan-essentials-ui"
+    tag: "sha-54e17a7-13"
+
+ingress:
+  type: "ingress-nginx" # traefik or ingress-nginx
+  mainDomain: "subscan.io"
+
+solidityVerificationTool: {}
+  # enabled: true
+  # repository: "quay.io/subscan-explorer/solidity-verification-tool"
+  # tag: "v1.0.4"
+  # pvc:
+  #   enabled: true
+  #   size: 10Gi
+  #   storageClass: ""
+  #   accessMode: "ReadWriteOnce"
+  # resources:
+  #   requests:
+  #     cpu: 100m
+  #     memory: 100Mi
+  #   limits:
+  #     cpu: 500m
+  #     memory: 500Mi

@@ -1,0 +1,46 @@
+{{- if $.Values.solidityVerificationTool.enabled }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: subscan-solidity-verification-tool
+  labels:
+    component: essentials-solidity-verification-tool
+    app: subscan-solidity-verification-tool
+spec:
+  strategy:
+    type: Recreate
+  replicas: 1
+  selector:
+    matchLabels:
+      component: essentials-solidity-verification-tool
+      app: subscan-solidity-verification-tool
+  template:
+    metadata:
+      labels:
+        component: essentials-solidity-verification-tool
+        app: subscan-solidity-verification-tool
+    spec:
+      {{- if $.Values.solidityVerificationTool.pvc.enabled }}
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: subscan-solidity-verification-tool
+      {{- end }}
+      containers:
+        - name: subscan-solidity-verification-tool
+          image: {{ $.Values.solidityVerificationTool.repository }}:{{ $.Values.solidityVerificationTool.tag }}
+          ports:
+            - name: http
+              containerPort: 8081
+          {{- if $.Values.solidityVerificationTool.pvc.enabled }}
+          volumeMounts:
+            - mountPath: /app/static
+              name: data
+          {{- end }}
+          resources:
+            requests:
+              {{- toYaml $.Values.solidityVerificationTool.resources.requests | nindent 14 }}
+            limits:
+              {{- toYaml $.Values.solidityVerificationTool.resources.limits | nindent 14 }}
+{{- end }}

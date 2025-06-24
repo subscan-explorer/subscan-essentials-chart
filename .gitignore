@@ -1,0 +1,9 @@
+.DS_Store
+.idea
+/charts/*/charts
+/charts/*/tmpcharts
+/charts/*/Chart.lock
+local
+tests
+.vscode
+.cursor

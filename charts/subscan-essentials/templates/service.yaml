@@ -1,0 +1,53 @@
+{{- $networkTypes := list "mainnet" "testnet" }}
+
+{{- range $networkType, $networks := $.Values }}
+  {{- if not (has $networkType $networkTypes)}}
+    {{- continue }}
+  {{- end }}
+  {{- range $networkName, $networkValues := $networks }}
+    {{ $networkValues := $networkValues.values }}
+    {{- $networkValues = mergeOverwrite (mustDeepCopy $.Values.networkTemplate) $networkValues}}
+    {{- if not $networkValues.api.enabled }}
+      {{- continue }}
+    {{- end }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: subscan-essentials-api-{{- include "subscan-essentials.networkName" $networkName }}
+spec:
+  selector:
+    {{- include "subscan-essentials.selectorLabels" $networkName | nindent 4 }}
+    component: essentials-api
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: subscan-essentials-ui-{{- include "subscan-essentials.networkName" $networkName }}
+spec:
+  selector:
+    {{- include "subscan-essentials.selectorLabels" $networkName | nindent 4 }}
+    component: essentials-ui
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+  {{- end }}
+{{- end }}
+
+{{- if $.Values.solidityVerificationTool.enabled }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: subscan-solidity-verification-tool
+spec:
+  ports:
+    - name: http
+      port: 80
+      targetPort: http
+{{- end }}

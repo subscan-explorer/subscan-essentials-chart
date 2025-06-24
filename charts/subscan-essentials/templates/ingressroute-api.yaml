@@ -1,0 +1,66 @@
+{{- $networkTypes := list "mainnet" "testnet" }}
+
+{{- range $networkType, $networks := $.Values }}
+  {{- if not (has $networkType $networkTypes)}}
+    {{- continue }}
+  {{- end }}
+  {{- range $networkName, $networkValues := $networks }}
+    {{ $networkValues := $networkValues.values }}
+    {{- $networkValues = mergeOverwrite (mustDeepCopy $.Values.networkTemplate) $networkValues}}
+    {{- if not $networkValues.api.enabled }}
+      {{- continue }}
+    {{- end }}
+    {{- $subdomains := $networkValues.ingress.subdomains }}
+    {{- if not $subdomains }}
+      {{- $subdomains = append $subdomains (include "subscan-essentials.networkName" $networkName) }}
+    {{- end }}
+    {{- $matchs := list }}
+    {{- range $subdomain := $subdomains }}
+      {{- if eq $.Values.ingress.type "traefik" }}
+        {{- $matchs = append $matchs (printf "Host(`%s.webapi.%s`)" $subdomain $.Values.ingress.mainDomain) }}
+      {{- else }}
+        {{- $matchs = append $matchs (printf "%s.%s" $subdomain $.Values.ingress.mainDomain) }}
+      {{- end }}
+    {{- end }}
+    {{- if eq $.Values.ingress.type "traefik" }}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: subscan-essentials-{{- include "subscan-essentials.networkName" $networkName }}
+spec:
+  entryPoints: [public]
+  routes:
+      {{- range $match := $matchs }}
+    - kind: Rule
+      match: {{ $match }}
+      priority: 1001
+      services:
+        - kind: Service
+          name: subscan-essentials-api-{{- include "subscan-essentials.networkName" $networkName }}
+          port: http
+      {{- end }}
+  {{- end }}
+{{- if eq $.Values.ingress.type "ingress-nginx" }}
+---
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: subscan-essentials-api-{{- include "subscan-essentials.networkName" $networkName }}
+spec:
+  rules:
+      {{- range $match := $matchs }}  
+    - host: {{ $match }}
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: subscan-essentials-api-{{- include "subscan-essentials.networkName" $networkName }}
+                port:
+                  name: http
+        {{- end }}
+      {{- end }}
+    {{- end }}
+{{- end }}

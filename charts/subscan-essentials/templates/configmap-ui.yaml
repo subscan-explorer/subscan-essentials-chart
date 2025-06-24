@@ -1,0 +1,32 @@
+{{- $networkTypes := list "mainnet" "testnet" }}
+
+{{- range $networkType, $networks := $.Values }}
+  {{- if not (has $networkType $networkTypes)}}
+    {{- continue }}
+  {{- end }}
+  {{- range $networkName, $networkValues := $networks }}
+    {{ $networkValues := $networkValues.values }}
+    {{- $networkValues = mergeOverwrite (mustDeepCopy $.Values.networkTemplate) $networkValues}}
+    {{- if not $networkValues.ui.enabled }}
+      {{- continue }}
+    {{- end }}
+    {{- $subdomains := $networkValues.ingress.subdomains }}
+    {{- if not $subdomains }}
+      {{- $subdomains = append $subdomains (include "subscan-essentials.networkName" $networkName) }}
+    {{- end }}
+    {{- $matchs := list }}
+    {{- range $subdomain := $subdomains }}
+      {{- $matchs = append $matchs (printf "%s.webapi.%s" $subdomain $.Values.ingress.mainDomain) }}
+    {{- end }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: subscan-essentials-{{- include "subscan-essentials.networkName" $networkName }}-backend-subdomain
+data:
+  __ENV.js: |
+    window.__ENV = {
+      NEXT_PUBLIC_API_HOST: "https://{{- index $matchs 0 }}"
+    };
+  {{- end }}
+{{- end }}
