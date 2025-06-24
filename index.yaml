@@ -1,0 +1,15 @@
+apiVersion: v1
+entries:
+  subscan-essentials-chart:
+  - apiVersion: v2
+    appVersion: 1.16.0
+    created: "2025-06-24T07:43:00.370036836Z"
+    description: A chart for deploying Subscan Essentials. It includes the backend,
+      UI, and worker services.
+    digest: 307f87f5ec03230aa6ce45aed74a7268138656b6ee17a657fd5a71f03a47fa7c
+    name: subscan-essentials-chart
+    type: application
+    urls:
+    - https://github.com/subscan-explorer/subscan-essentials-chart/releases/download/subscan-essentials-chart-0.0.1/subscan-essentials-chart-0.0.1.tgz
+    version: 0.0.1
+generated: "2025-06-24T07:43:00.370042056Z"
