@@ -1,0 +1,204 @@
+<h1 id="subscan-essentials-helm-chart">Subscan Essentials Helm Chart</h1>
+<p>This Helm chart deploys the Subscan Essentials stack, including API, Worker, Daemon, and UI components. It supports multi-network (mainnet/testnet) configuration and is compatible with both Traefik and Ingress-Nginx.</p>
+<hr>
+<h2 id="dependencies">Dependencies</h2>
+<p>Before installing this chart, you must have the following dependencies available in your Kubernetes cluster or accessible network environment:</p>
+<ul>
+<li><strong>Ingress Controller</strong><ul>
+<li>If <code>ingress.type=ingress-nginx</code>, install <a href="https://github.com/kubernetes/ingress-nginx">ingress-nginx</a>.</li>
+<li>If <code>ingress.type=traefik</code>, install <a href="https://github.com/traefik/traefik">Traefik</a>.</li>
+</ul>
+</li>
+<li><strong>Database and Cache Services</strong><ul>
+<li><strong>PostgreSQL</strong>: Required for backend data storage. Configure connection details using <code>DB_DRIVER=postgres</code>, <code>POSTGRES_HOST</code>, <code>POSTGRES_PORT</code>, <code>POSTGRES_USER</code>, <code>POSTGRES_DB</code>, and <code>POSTGRES_PASSWORD</code> in the appropriate environment variable section of your <code>values.yaml</code> (e.g., <code>mainnetEnvVars</code>, <code>testnetEnvVars</code>, or per-network <code>envVars</code>).</li>
+<li><strong>Redis</strong>: Required for caching. Configure connection details using <code>REDIS_HOST</code>, <code>REDIS_PORT</code>, <code>REDIS_PASSWORD</code>, and <code>REDIS_DATABASE</code> in the same environment variable sections.</li>
+</ul>
+</li>
+</ul>
+<p>Refer to the official documentation for installation instructions for each controller and database/cache system. Make sure all connection information is set in <code>values.yaml</code> under the appropriate environment variable sections before deploying this chart.</p>
+<hr>
+<h2 id="table-of-contents">Table of Contents</h2>
+<ul>
+<li><a href="#introduction">Introduction</a></li>
+<li><a href="#installation">Installation</a></li>
+<li><a href="#upgrading">Upgrading</a></li>
+<li><a href="#configuration">Configuration</a></li>
+<li><a href="#templates-overview">Templates Overview</a></li>
+<li><a href="#examples">Examples</a></li>
+<li><a href="#advanced-usage">Advanced Usage</a></li>
+<li><a href="#references">References</a></li>
+</ul>
+<hr>
+<h2 id="introduction">Introduction</h2>
+<p>This chart provides a flexible way to deploy Subscan Essentials services. You can customize images, resources, environment variables, ingress domains, and more via <code>values.yaml</code>. Both mainnet and testnet networks are supported.</p>
+<hr>
+<h2 id="installation">Installation</h2>
+<pre><code class="lang-sh"><span class="hljs-symbol">helm</span> repo <span class="hljs-keyword">add </span><span class="hljs-keyword">subscan </span>https://<span class="hljs-keyword">subscan-explorer.github.io/subscan-essentials-chart/
+</span><span class="hljs-symbol">helm</span> install <span class="hljs-keyword">subscan-essentials </span><span class="hljs-keyword">subscan/subscan-essentials-chart </span>-f example/<span class="hljs-keyword">subscan-essentials/values.yaml</span>
+</code></pre>
+<h2 id="upgrading">Upgrading</h2>
+<pre><code class="lang-sh"><span class="hljs-symbol">helm</span> upgrade <span class="hljs-keyword">subscan-essentials </span><span class="hljs-keyword">subscan/subscan-essentials-chart </span>-f example/<span class="hljs-keyword">subscan-essentials/values.yaml</span>
+</code></pre>
+<hr>
+<h2 id="configuration">Configuration</h2>
+<p>The following table lists the most important configurable parameters of the chart and their default values. For a full list, see <code>values.yaml</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Parameter</th>
+<th>Description</th>
+<th>Default</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td><code>commonLabels</code></td>
+<td>Common Kubernetes labels for all resources</td>
+<td>See values.yaml</td>
+</tr>
+<tr>
+<td><code>mainnetEnvVars</code></td>
+<td>Mainnet environment variables</td>
+<td>See values.yaml</td>
+</tr>
+<tr>
+<td><code>testnetEnvVars</code></td>
+<td>Testnet environment variables</td>
+<td>See values.yaml</td>
+</tr>
+<tr>
+<td><code>networkTemplate</code></td>
+<td>Default configuration template for each component</td>
+<td>See values.yaml</td>
+</tr>
+<tr>
+<td><code>testnet</code></td>
+<td>Testnet network-specific configuration</td>
+<td><code>{}</code></td>
+</tr>
+<tr>
+<td><code>mainnet</code></td>
+<td>Mainnet network-specific configuration</td>
+<td><code>{}</code></td>
+</tr>
+<tr>
+<td><code>images.backend.repository</code></td>
+<td>Backend image repository</td>
+<td>quay.io/subscan-explorer/subscan-essentials</td>
+</tr>
+<tr>
+<td><code>images.backend.mainnet</code></td>
+<td>Backend image tag for mainnet</td>
+<td>sha-5775183-33</td>
+</tr>
+<tr>
+<td><code>images.backend.testnet</code></td>
+<td>Backend image tag for testnet</td>
+<td>sha-5775183-33</td>
+</tr>
+<tr>
+<td><code>images.ui.repository</code></td>
+<td>UI image repository</td>
+<td>quay.io/subscan-explorer/subscan-essentials-ui</td>
+</tr>
+<tr>
+<td><code>images.ui.tag</code></td>
+<td>UI image tag</td>
+<td>sha-54e17a7-13</td>
+</tr>
+<tr>
+<td><code>ingress.type</code></td>
+<td>Ingress type (<code>traefik</code> or <code>ingress-nginx</code>)</td>
+<td>traefik</td>
+</tr>
+<tr>
+<td><code>ingress.mainDomain</code></td>
+<td>Main domain for ingress</td>
+<td>subscan.io</td>
+</tr>
+</tbody>
+</table>
+<h3 id="component-parameters-from-networktemplate-">Component Parameters (from <code>networkTemplate</code>)</h3>
+<ul>
+<li><code>daemon.enabled</code>: Enable Daemon component</li>
+<li><code>worker.replicaCount</code>: Number of Worker replicas</li>
+<li><code>api.autoscaling.enabled</code>: Enable autoscaling for API</li>
+<li><code>ui.enabled</code>: Enable UI component</li>
+<li><code>resources.requests/limits</code>: Resource requests and limits</li>
+<li><code>envVars</code>: Custom environment variables</li>
+<li><code>image.tag</code>: Image tag override</li>
+</ul>
+<h3 id="network-configuration">Network Configuration</h3>
+<ul>
+<li><code>testnet.&lt;network&gt;.values</code>: Per-testnet network configuration (env vars, worker replicas, ingress subdomains, etc.)</li>
+<li><code>mainnet</code>: Mainnet configuration (same structure as above)</li>
+</ul>
+<hr>
+<h2 id="templates-overview">Templates Overview</h2>
+<p>This chart includes the following Kubernetes resources:</p>
+<ul>
+<li><code>deployment-api.yaml</code>: API Deployment</li>
+<li><code>deployment-worker.yaml</code>: Worker Deployment</li>
+<li><code>deployment-daemon.yaml</code>: Daemon Deployment</li>
+<li><code>deployment-ui.yaml</code>: UI Deployment</li>
+<li><code>service.yaml</code>: Service definitions for all components</li>
+<li><code>ingressroute-api.yaml</code>, <code>ingressroute-ui.yaml</code>: Traefik IngressRoute resources</li>
+<li><code>configmap-ui.yaml</code>: UI ConfigMap</li>
+<li><code>secret-envvars-backend.yaml</code>: Backend environment variable Secret</li>
+</ul>
+<hr>
+<h2 id="examples">Examples</h2>
+<h3 id="1-enable-the-assethub-westend-testnet">1. Enable the assethub-westend testnet</h3>
+<pre><code class="lang-yaml"><span class="hljs-attribute">testnet</span>:
+    <span class="hljs-attribute">assethub-westend</span>: # It must be equal NETWORK_NODE
+        <span class="hljs-attribute">values</span>:
+            <span class="hljs-attribute">envVars</span>:
+                <span class="hljs-attribute">CHAIN_WS_ENDPOINT</span>: <span class="hljs-attribute">wss</span>:<span class="hljs-comment">//api-asset-hub-westend.dwellir.com/xxxxxxxx</span>
+                <span class="hljs-attribute">NETWORK_NODE</span>: assethub-westend # It must be equal to and unique from the network name.
+                <span class="hljs-attribute">POSTGRES_DB</span>: subscan_assethub_westend
+                <span class="hljs-attribute">POSTGRES_HOST</span>: subscan-postgres-testnet-a
+                <span class="hljs-attribute">ETH_RPC</span>: <span class="hljs-attribute">https</span>:<span class="hljs-comment">//westend-asset-hub-eth-rpc.polkadot.io</span>
+                <span class="hljs-attribute">REDIS_HOST</span>: subscan-redis-essentials-master.db.svc
+            <span class="hljs-attribute">worker</span>:
+                <span class="hljs-attribute">replicaCount</span>: <span class="hljs-number">1</span>
+                <span class="hljs-attribute">image</span>:
+                    <span class="hljs-attribute">tag</span>: <span class="hljs-string">"your-custom-tag"</span>
+            <span class="hljs-attribute">api</span>:
+                <span class="hljs-attribute">image</span>:
+                    <span class="hljs-attribute">tag</span>: <span class="hljs-string">"your-custom-tag"</span>
+            <span class="hljs-attribute">daemon</span>:
+                <span class="hljs-attribute">image</span>:
+                    <span class="hljs-attribute">tag</span>: <span class="hljs-string">"your-custom-tag"</span>
+            <span class="hljs-attribute">ui</span>:
+                <span class="hljs-attribute">image</span>:
+                    <span class="hljs-attribute">tag</span>: <span class="hljs-string">"your-custom-tag"</span>
+            <span class="hljs-attribute">ingress</span>:
+                <span class="hljs-attribute">subdomains</span>:
+                    - assethub-westend-lite
+                    - assethub-westend-essentials
+</code></pre>
+<h3 id="2-override-image-tags">2. Override image tags</h3>
+<pre><code class="lang-yaml"><span class="hljs-symbol">images:</span>
+<span class="hljs-symbol">  backend:</span>
+<span class="hljs-symbol">    repository:</span> <span class="hljs-string">"quay.io/subscan-explorer/subscan-essentials"</span>
+<span class="hljs-symbol">    mainnet:</span> <span class="hljs-string">"sha-5775183-33"</span>
+<span class="hljs-symbol">    testnet:</span> <span class="hljs-string">"sha-5775183-33"</span>
+<span class="hljs-symbol">  ui:</span>
+<span class="hljs-symbol">    repository:</span> <span class="hljs-string">"quay.io/subscan-explorer/subscan-essentials-ui"</span>
+<span class="hljs-symbol">    tag:</span> <span class="hljs-string">"sha-54e17a7-13"</span>
+</code></pre>
+<hr>
+<h2 id="advanced-usage">Advanced Usage</h2>
+<ul>
+<li>Supports referencing secrets via <code>envFrom</code></li>
+<li>Custom resource limits and pod security context</li>
+<li>Multi-network, multi-instance deployments</li>
+</ul>
+<hr>
+<h2 id="references">References</h2>
+<ul>
+<li><a href="https://helm.sh/docs/">Helm Documentation</a></li>
+<li><a href="https://github.com/subscan-explorer/subscan-essentials">Subscan Essentials Backend</a></li>
+<li><a href="https://github.com/subscan-explorer/subscan-essentials-ui-react">Subscan Essentials UI</a></li>
+</ul>
+<hr>
