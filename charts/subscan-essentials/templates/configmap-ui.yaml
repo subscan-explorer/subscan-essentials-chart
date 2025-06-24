@@ -1,5 +1,4 @@
 {{- $networkTypes := list "mainnet" "testnet" }}
-
 {{- range $networkType, $networks := $.Values }}
   {{- if not (has $networkType $networkTypes)}}
     {{- continue }}
